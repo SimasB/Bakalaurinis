@@ -1,0 +1,162 @@
+---
+title: "read_data"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+library(minfi)
+library(minfiData)
+library(data.table)
+library(basetheme)
+```
+
+# Metilinimo duomenų nuskaitymas
+
+
+```{r}
+#98876, 147430
+id <- 98876
+bumps <- readRDS(paste(".\\98876_years_addicted.rds", sep=""))
+bs <- bumps$table
+```
+
+```{r}
+length(bs$L[bs$L>2])
+length(bumps$n[bumps$n>2])
+```
+
+```{r}
+write.csv(bs, paste(".\\bumps_", id, "_alcohol_bh.csv", sep=""))
+```
+
+
+# Tas grafikas
+
+```{r}
+id <- 98876
+beta <- fread(paste(".\\",id,"_beta.csv", sep=""), data.table=FALSE)
+pheno <- fread(paste(".\\",id,"_pheno.csv", sep=""), data.table=FALSE)
+annotation <- fread(paste(".\\",id,"_annotation.csv", sep=""), data.table=FALSE)
+beta <- as.matrix(beta[,-1])
+```
+
+
+```{r}
+library(basetheme)
+
+basetheme("clean")
+img_beta <- as.matrix(beta[259737:259793,])
+
+plot(row(img_beta), img_beta, col=num2col(rep(pheno$age, each=dim(img_beta)[1])))
+```
+
+```{r}
+basetheme("clean")
+start_cord <- 89390609
+end_cord <- 89390968
+reg_len <- end_cord - start_cord
+inds <- annotation$chr=="chr16" & annotation$pos > (start_cord-reg_len*5) & annotation$pos < (end_cord+reg_len*5)
+img_beta <- as.matrix(beta[inds,])
+#beta_age <- t(apply(img_beta, 1, tapply, cut(pheno$age, 5), mean))
+cpd <- pheno$years_addicted
+cpd[is.na(cpd)] <- 0
+beta_age <- t(apply(img_beta, 1, tapply, cpd>0, mean))
+plot.new()
+img_ann <- annotation[inds, ]
+plot.window(xlim = range(img_ann$pos), ylim = c(0,1), yaxs="i")
+rect(start_cord, 0, end_cord, 1, col="lightgray", border=NA)
+points(img_ann$pos[row(beta_age)], beta_age, col=num2col(rep(1:2, each=dim(beta_age)[1])))
+#points(row(img_beta), img_beta, col=num2col(rep(pheno$age, each=dim(img_beta)[1])))
+axis(1)
+axis(2)
+title(paste("GSE",id, " ilgiausias DNR metilinimo regionas, išsiskiriantys pagal alkoholio vartojimą", sep=""))
+title(xlab = "Genominės koordinatės")
+title(ylab = "beta vertės")
+```
+
+# sukombinuotų analizė
+
+
+```{r}
+#98876, 147430
+#id <- 147430
+#bumps <- readRDS(paste(".\\bumps_", id, "_dmrff_cigs_per_day.rds", sep=""))
+bumps <- read.csv(".\\bumps_98876_alcohol_dmrff.csv")
+```
+
+```{r}
+#length(bs$n[bs$n>2])
+length(bumps$length[bumps$length>2])
+┴length(bumps$n[bumps$n>2])
+```
+
+```{r}
+bumps[order(bumps$length, decreasing = TRUE),]
+bumps[order(bumps$n, decreasing = TRUE),]
+bs[order(bs$L, decreasing = TRUE),]
+```
+
+
+# some stats
+
+```{r}
+some_stats <- c(0.00316825, 0.00339676, 0.001449767, 0.0019732, 0.0018812, 0.0032336, 0.002091, 0.00146855, 0.00346, 0.001973, 0.001290759, 0.0052417, 0.0000208745, 0.0003036, 0.0014632, 0.00018487, 0.001581978, 0.00712, 0.002574, 0.004625, 0.005069, 0.0001288, 0.00011, 0.00021778, 0.0007487)
+hist(some_stats, breaks = 30)
+```
+
+# Linijinis grafikas cutoffui gerint
+
+5 - 0.0077823668
+10 - 0.00734685
+20 - 0.0060696799
+30 -  0.005128916
+40 - 0.0043635188
+50 - 0.003487921457176
+60 - 0.0035523979
+70 - 0.003444193
+80 - 0.00355297
+90 - 0.00517799
+95 - 0.0065189048
+
+```{r}
+library(ggplot2)
+library(dplyr)
+#library(hrbrthemes)
+
+x <- c(5,10,20,30,40,50,60,70,80,90,95)
+y <- c(0.00778, 0.00735, 0.00607, 0.00513, 0.00436, 0.00349, 0.00355, 0.0034, 0.00355, 0.00518, 0.0065)
+
+# Plot
+
+plot( x=x, y=y, type="o", ylab="Persiklojimas", xlab="Procentilė", col="blue", main="Persiklojimo tarp rūkymo ir alkoholio vartojimo kitimas nuo procentilės")
+```
+
+```{r}
+library(ggplot2)
+library(dplyr)
+#library(hrbrthemes)
+
+x <- c(1,2,3,4,5,6,7,8,9,10)
+y <- c(0.01516, 0.01498, 0.01481, 0.01463, 0.014547, 0.01435, 0.01419, 0.01394, 0.013775, 0.01358)
+
+# Plot
+
+plot( x=x, y=y, type="o", ylab="Persiklojimas", xlab="Procentilė", col="blue", main="Persiklojimo tarp amžiaus ir rūkymo kitimas nuo procentilės")
+```
+
+
+```{r}
+all_vals <- read.csv("all_vals.csv")
+vs <- all_vals$vals
+vs[vs == 0] <- NA
+vs2 <- all_vals$vals
+vs2[vs2 >0.002] <- NA
+hist(vs2, breaks = 1000, main="Citozinu svoriu pasiskirstymas")
+```
+
+
+
+
+

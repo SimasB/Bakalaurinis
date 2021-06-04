@@ -1,0 +1,49 @@
+---
+title: "read_data"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+library(minfi)
+library(minfiData)
+library(tidyr)
+```
+
+# 98876
+
+```{r}
+id <- 98876
+beta <- read.csv(paste(".\\", id, "_beta.csv", sep=""))
+pheno <- read.csv(paste(".\\", id, "_pheno.csv", sep=""))
+annotation <- read.csv(paste(".\\", id, "_annotation.csv", sep=""))
+```
+
+```{r}
+# sum(is.na(pheno$age))
+# mean(pheno$years_addicted[!is.na(pheno$years_addicted)])
+colnames(pheno)
+```
+
+# 147430
+
+```{r}
+id <- 147430
+beta <- read.csv(paste(".\\", id, "_beta.csv", sep=""))
+pheno <- read.csv(paste(".\\", id, "_pheno.csv", sep=""))
+annotation <- read.csv(paste(".\\", id, "_annotation.csv", sep=""))
+```
+
+```{r}
+# sum(is.na(pheno$age))
+# mean(pheno$years_addicted[!is.na(pheno$years_addicted)])
+colnames(pheno)
+```
+
+```{r}
+cot <- pheno$cotinine
+cot[cot == "<2"] <- 1
+cot <- as.numeric(cot)
+```
+

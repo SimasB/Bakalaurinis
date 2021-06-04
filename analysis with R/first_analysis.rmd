@@ -1,0 +1,157 @@
+---
+title: "read_data"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+library(minfi)
+library(minfiData)
+```
+
+# Metilinimo duomenų nuskaitymas
+
+
+```{r}
+#98876, 147430
+id <- 147430
+beta <- read.csv(paste(".\\", id, "_beta.csv", sep=""))
+pheno <- read.csv(paste(".\\", id, "_pheno.csv", sep=""))
+annotation <- read.csv(paste(".\\", id, "_annotation.csv", sep=""))
+```
+
+```{r}
+des <- model.matrix(~age, data=pheno)
+chr <- substring(annotation$chr, first = 4)
+betas <- as.matrix(beta[,-1])
+```
+
+```{r}
+bumps <- bumphunter(betas, design=des, chr=annotation$chr, pos=annotation$pos)#, pickCutoff=TRUE, cutoff=0.005, B=1000
+```
+
+```{r}
+id <- 98876
+bumps <- bumphunter(as.matrix(read.csv(paste(".\\", id, "_beta.csv", sep=""))[,-1]), design=model.matrix(~age, data=read.csv(paste(".\\", id, "_pheno.csv", sep=""))), chr=read.csv(paste(".\\", id, "_annotation.csv", sep=""))$chr, pos=read.csv(paste(".\\", id, "_annotation.csv", sep=""))$pos, B=1000) #  pickCutoff=TRUE, cutoff=0.005,
+```
+
+```{r}
+saveRDS(bumps, paste(id, "_test_bumps.rds"))
+```
+
+# dmrff
+
+```{r}
+library(IlluminaHumanMethylation450kanno.ilmn12.hg19)
+library(dmrff)
+library(limma)
+```
+
+```{r}
+des <- model.matrix(~class, data=pheno)
+classGBM <- c(rep(1, 41), rep(0, 49))
+des <- cbind(des, classGBM)
+classGSC <- c(rep(0, 41), rep(1, 40), rep(0, 9))
+classNSC <- c(rep(0, 81), rep(1, 9))
+des2 <- cbind(des[,"(Intercept)"], classGSC, classGBM) #  , classGSC, classNSC
+fit <- lmFit(betas, des2)
+fit <- eBayes(fit)
+```
+
+```{r}
+set.seed(2021)
+cpd <- pheno$years_addicted
+cpd[is.na(cpd)] <- 0
+cpd <- as.factor(cpd>0)
+des <- model.matrix(~pheno$age + cpd)
+#beta <- as.matrix(beta[,-1])
+#beta[is.na(beta)] <- 0
+#des2 <- cbind(des[,"(Intercept)"], des[,"age"], pheno$cigs_per_day)
+fit <- lmFit(beta, des)
+fit <- eBayes(fit)
+```
+
+```{r}
+stats <- data.frame(estimate=fit$coefficients[,"cpdTRUE"],
+                    se=sqrt(fit$s2.post) * fit$stdev.unscaled[,"cpdTRUE"],
+                    p.value=fit$p.value[,"cpdTRUE"])
+```
+
+
+
+```{r}
+dmrs <- dmrff(estimate=stats$estimate,
+              se=stats$se,
+              p.value=stats$p.value,
+              methylation=beta,
+              chr=annotation$chr,
+              pos=annotation$pos,
+              maxgap=500,
+              verbose=T)
+saveRDS(dmrs, paste(".\\bumps_", id, "_dmrff_alcohol.rds", sep=""))
+```
+
+```{r}
+saveRDS(dmrs, ".\\bumps_147430_dmrff.rds")
+```
+
+```{r}
+stats <- data.frame(estimate=fit$coefficients[,"classGSC"],
+                    se=sqrt(fit$s2.post) * fit$stdev.unscaled[,"classGSC"],
+                    p.value=fit$p.value[,"classGSC"])
+dmrsGSC <- dmrff(estimate=stats$estimate,
+              se=stats$se,
+              p.value=stats$p.value,
+              methylation=betas,
+              chr=annotation$chr,
+              pos=annotation$pos,
+              maxgap=500,
+              verbose=T)
+stats <- data.frame(estimate=fit$coefficients[,"classNSC"],
+                    se=sqrt(fit$s2.post) * fit$stdev.unscaled[,"classNSC"],
+                    p.value=fit$p.value[,"classNSC"])
+dmrsGSC <- dmrff(estimate=stats$estimate,
+              se=stats$se,
+              p.value=stats$p.value,
+              methylation=betas,
+              chr=annotation$chr,
+              pos=annotation$pos,
+              maxgap=500,
+              verbose=T)
+bumps <- bumphunter(betas[267467:319539,], design=des, chr=annotation$chr, pos=annotation$pos, pickCutoff=TRUE, cutoff=0.005, B=200)
+```
+
+```{r}
+dmrsNSC <- dmrsGSC
+stats <- data.frame(estimate=fit$coefficients[,"classGSC"],
+                    se=sqrt(fit$s2.post) * fit$stdev.unscaled[,"classGSC"],
+                    p.value=fit$p.value[,"classGSC"])
+dmrsGSC <- dmrff(estimate=stats$estimate,
+              se=stats$se,
+              p.value=stats$p.value,
+              methylation=betas,
+              chr=annotation$chr,
+              pos=annotation$pos,
+              maxgap=500,
+              verbose=T)
+```
+
+```{r}
+stats <- data.frame(estimate=fit$coefficients[,"(Intercept)"],
+                    se=sqrt(fit$s2.post) * fit$stdev.unscaled[,"(Intercept)"],
+                    p.value=fit$p.value[,"(Intercept)"])
+dmrsGBM <- dmrff(estimate=stats$estimate,
+              se=stats$se,
+              p.value=stats$p.value,
+              methylation=betas,
+              chr=annotation$chr,
+              pos=annotation$pos,
+              maxgap=500,
+              verbose=T)
+```
+
+
+
+
+
